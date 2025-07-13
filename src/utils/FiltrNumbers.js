@@ -1,16 +1,9 @@
-export function analyzeParityPattern(input) {
-  const numbers = input
-    .split(',')
-    .map(str => parseInt(str.trim()))
-    .filter(n => !isNaN(n));
+export function analyzeParityPattern(numbers) {
+  const even = numbers.filter(n => n % 2 === 0)
+  const odd = numbers.filter(n => n % 2 !== 0)
 
-  if (numbers.length < 3) return null;
+  if (even.length === 1) return even
+  if (odd.length === 1) return odd
 
-  const even = numbers.filter(n => n % 2 === 0);
-  const odd = numbers.filter(n => n % 2 !== 0);
-
-  if (even.length === 1) return even;
-  if (odd.length === 1) return odd;
-
-  return null;
+  return null
 }

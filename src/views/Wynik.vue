@@ -1,15 +1,15 @@
 <template>
-  <Tile title="Wynik">
+  <Tile :title="$t('submit')">
     <p v-if="outlier !== null">
-      Liczba odstająca: <strong>{{ outlier }}</strong>
+      {{ $t('outlierFound', { number: outlier }) }}
     </p>
     <p v-else>
-      Nie znaleziono jednoznacznie odstającej liczby.
+      {{ $t('noOutlier') }}
     </p>
 
     <template #actions>
       <RouteButton to="/">
-        Powrót
+        {{ $t('back') }}
       </RouteButton>
     </template>
   </Tile>
@@ -18,6 +18,7 @@
 <script>
 import Tile from '@/components/Tile.vue'
 import RouteButton from '@/components/RouteToButton.vue'
+import { useOutlierStore } from '@/stores/outlierStore'
 
 export default {
   name: 'Wynik',
@@ -27,8 +28,7 @@ export default {
   },
   computed: {
     outlier() {
-      const val = this.$route.params.outlier
-      return val !== undefined && val !== '' ? Number(val) : null
+      return useOutlierStore().outlier
     }
   }
 }

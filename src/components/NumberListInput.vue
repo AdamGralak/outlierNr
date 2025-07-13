@@ -2,16 +2,19 @@
   <div class="number-list-input">
     <label v-if="label">{{ label }}</label>
     <input
-      :value="internalValue"
+      v-model="inputValue"
       @input="onInput"
       type="text"
-      :placeholder="placeholder"
+      :placeholder="$t('inputPlaceholder')"
       class="input"
     />
   </div>
 </template>
 
 <script>
+import { useOutlierStore } from '@/stores/outlierStore'
+import { analyzeParityPattern } from '@/utils/FiltrNumbers.js'
+
 export default {
   name: 'NumberListInput',
   props: {
@@ -19,27 +22,65 @@ export default {
       type: String,
       default: ''
     },
-    label: String,
-    placeholder: {
-      type: String,
-      default: 'Np. 12, 45, 7'
-    }
+    label: String
   },
   emits: ['update:modelValue'],
-  computed: {
-    internalValue() {
-      return this.modelValue
+  data() {
+    return {
+      inputValue: this.modelValue
+    }
+  },
+  watch: {
+    modelValue(val) {
+      this.inputValue = val
     }
   },
   methods: {
-    onInput(event) {
-      const raw = event.target.value
-      const cleaned = raw.replace(/[^\d,\s]/g, '') // zostawia tylko cyfry, przecinki, spacje
-      this.$emit('update:modelValue', cleaned)
+    onInput() {
+      let raw = this.inputValue
 
-      // aktualizacja wartości w polu, jeśli coś zostało wyczyszczone
-      if (cleaned !== raw) {
-        event.target.value = cleaned
+      // Usuń litery i niedozwolone znaki
+      raw = raw.replace(/[a-zA-Z]+/g, '')
+
+      // Zapisz surowe dane przed ewentualnym formatowaniem
+      this.inputValue = raw
+      this.$emit('update:modelValue', raw)
+
+      if (raw.trim() === '') {
+        const store = useOutlierStore()
+        store.outlier = null
+        store.error = 'notEnough'
+        return
+      }
+
+      const store = useOutlierStore()
+
+      if (raw.endsWith(',')) {
+        let parts = raw.slice(0, -1).split(',').map(p => p.trim())
+
+        parts = parts.map(p => {
+          const match = p.match(/^-?\d+/)
+          return match ? match[0] : ''
+        }).filter(Boolean)
+
+        // NIE dodawaj spacji po przecinkach
+        setTimeout(() => {
+          const formatted = parts.join(',') + ','
+          this.inputValue = formatted
+          this.$emit('update:modelValue', formatted)
+        }, 0)
+
+        store.analyze(parts.join(','), analyzeParityPattern)
+      } else {
+        const parsed = raw
+          .split(',')
+          .map(n => n.trim())
+          .filter(n => /^-?\d+$/.test(n))
+          .map(n => parseInt(n, 10))
+
+        if (parsed.length > 0) {
+          store.analyze(parsed.join(','), analyzeParityPattern)
+        }
       }
     }
   }
