@@ -36,53 +36,51 @@ export default {
     }
   },
   methods: {
-    onInput() {
-      let raw = this.inputValue
+onInput() {
+  let raw = this.inputValue
 
-      // Usuń litery i niedozwolone znaki
-      raw = raw.replace(/[a-zA-Z]+/g, '')
+  // Zezwól tylko na cyfry, przecinki i minusy
+  raw = raw.replace(/[^\d,\-]/g, '')
 
-      // Zapisz surowe dane przed ewentualnym formatowaniem
-      this.inputValue = raw
-      this.$emit('update:modelValue', raw)
+  // Nie nadpisuj inputa podczas pisania, tylko gdy coś zostanie zakończone przecinkiem
+  this.inputValue = raw
+  this.$emit('update:modelValue', raw)
 
-      if (raw.trim() === '') {
-        const store = useOutlierStore()
-        store.outlier = null
-        store.error = 'notEnough'
-        return
-      }
+  const store = useOutlierStore()
 
-      const store = useOutlierStore()
+  if (raw.trim() === '') {
+    store.outlier = null
+    store.error = 'notEnough'
+    return
+  }
 
-      if (raw.endsWith(',')) {
-        let parts = raw.slice(0, -1).split(',').map(p => p.trim())
+  // Jeśli kończy się przecinkiem – sformatuj dane
+  if (raw.endsWith(',')) {
+    let parts = raw.slice(0, -1).split(',').map(p => {
+      const match = p.match(/^(-?\d+)$/)
+      return match ? match[1] : ''
+    }).filter(Boolean)
 
-        parts = parts.map(p => {
-          const match = p.match(/^-?\d+/)
-          return match ? match[0] : ''
-        }).filter(Boolean)
+    // Przepisz tylko poprawne części
+    const formatted = parts.join(',') + ','
+    setTimeout(() => {
+      this.inputValue = formatted
+      this.$emit('update:modelValue', formatted)
+    }, 0)
 
-        // NIE dodawaj spacji po przecinkach
-        setTimeout(() => {
-          const formatted = parts.join(',') + ','
-          this.inputValue = formatted
-          this.$emit('update:modelValue', formatted)
-        }, 0)
+    store.analyze(parts.join(','), analyzeParityPattern)
+  } else {
+    const parsed = raw
+      .split(',')
+      .map(p => p.trim())
+      .filter(p => /^-?\d+$/.test(p))
+      .map(Number)
 
-        store.analyze(parts.join(','), analyzeParityPattern)
-      } else {
-        const parsed = raw
-          .split(',')
-          .map(n => n.trim())
-          .filter(n => /^-?\d+$/.test(n))
-          .map(n => parseInt(n, 10))
-
-        if (parsed.length > 0) {
-          store.analyze(parsed.join(','), analyzeParityPattern)
-        }
-      }
+    if (parsed.length > 0) {
+      store.analyze(parsed.join(','), analyzeParityPattern)
     }
+  }
+}
   }
 }
 </script>
